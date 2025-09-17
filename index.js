@@ -1,4 +1,4 @@
-import { getPosts } from "./api.js";
+import { getPosts, getUserPosts, addPost } from "./api.js";
 import { renderAddPostPageComponent } from "./components/add-post-page-component.js";
 import { renderAuthPageComponent } from "./components/auth-page-component.js";
 import {
@@ -45,8 +45,13 @@ export const goToPage = (newPage, data) => {
     ].includes(newPage)
   ) {
     if (newPage === ADD_POSTS_PAGE) {
-      /* Если пользователь не авторизован, то отправляем его на страницу авторизации перед добавлением поста */
-      page = user ? ADD_POSTS_PAGE : AUTH_PAGE;
+      // Проверяем, что пользователь авторизован и у него есть токен
+      if (!user || !user.token) {
+        alert("Для добавления поста необходимо авторизоваться");
+        page = AUTH_PAGE;
+        return renderApp();
+      }
+      page = ADD_POSTS_PAGE;
       return renderApp();
     }
 
@@ -67,11 +72,18 @@ export const goToPage = (newPage, data) => {
     }
 
     if (newPage === USER_POSTS_PAGE) {
-      // @@TODO: реализовать получение постов юзера из API
-      console.log("Открываю страницу пользователя: ", data.userId);
-      page = USER_POSTS_PAGE;
-      posts = [];
-      return renderApp();
+      page = LOADING_PAGE;
+      renderApp();
+      return getUserPosts({ userId: data.userId, token: getToken() })
+        .then((userPosts) => {
+          page = USER_POSTS_PAGE;
+          posts = userPosts;
+          renderApp();
+        })
+        .catch((error) => {
+          console.error(error);
+          goToPage(POSTS_PAGE);
+        });
     }
 
     page = newPage;
@@ -83,7 +95,7 @@ export const goToPage = (newPage, data) => {
   throw new Error("страницы не существует");
 };
 
-const renderApp = () => {
+export const renderApp = () => {
   const appEl = document.getElementById("app");
   if (page === LOADING_PAGE) {
     return renderLoadingPageComponent({
@@ -99,6 +111,7 @@ const renderApp = () => {
       setUser: (newUser) => {
         user = newUser;
         saveUserToLocalStorage(user);
+        console.log("user после логина/регистрации:", user); // Для отладки
         goToPage(POSTS_PAGE);
       },
       user,
@@ -110,9 +123,24 @@ const renderApp = () => {
     return renderAddPostPageComponent({
       appEl,
       onAddPostClick({ description, imageUrl }) {
-        // @TODO: реализовать добавление поста в API
-        console.log("Добавляю пост...", { description, imageUrl });
-        goToPage(POSTS_PAGE);
+        // Для отладки:
+        console.log("user:", user);
+        console.log("token:", getToken());
+        console.log("description:", description, "imageUrl:", imageUrl);
+
+        if (!user || !user.token) {
+          alert("Вы не авторизованы. Пожалуйста, войдите в систему.");
+          goToPage(AUTH_PAGE);
+          return;
+        }
+
+        addPost({ description, imageUrl, token: getToken() })
+          .then(() => {
+            goToPage(POSTS_PAGE);
+          })
+          .catch((error) => {
+            alert(error.message);
+          });
       },
     });
   }
@@ -124,9 +152,9 @@ const renderApp = () => {
   }
 
   if (page === USER_POSTS_PAGE) {
-    // @TODO: реализовать страницу с фотографиями отдельного пользвателя
-    appEl.innerHTML = "Здесь будет страница фотографий пользователя";
-    return;
+    return renderPostsPageComponent({
+      appEl,
+    });
   }
 };
 
