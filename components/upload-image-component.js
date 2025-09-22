@@ -19,7 +19,7 @@ export function renderUploadImageComponent({ element, onImageUrlChange }) {
 
   /**
    * Функция рендеринга компонента.
-   * Отображает интерфейс компонента в зависимости от состояния: 
+   * Отображает интерфейс компонента в зависимости от состояния:
    * либо форма выбора файла, либо превью загруженного изображения с кнопкой замены.
    */
   const render = () => {
@@ -52,10 +52,16 @@ export function renderUploadImageComponent({ element, onImageUrlChange }) {
     fileInputElement?.addEventListener("change", () => {
       const file = fileInputElement.files[0];
       if (file) {
+        if (file.size > 1024 * 1024) {
+          // 1 МБ
+          alert("Файл слишком большой. Максимальный размер — 1 МБ.");
+          fileInputElement.value = "";
+          return;
+        }
         const labelEl = document.querySelector(".file-upload-label");
         labelEl.setAttribute("disabled", true);
         labelEl.textContent = "Загружаю файл...";
-        
+
         // Загружаем изображение с помощью API
         uploadImage({ file }).then(({ fileUrl }) => {
           imageUrl = fileUrl; // Сохраняем URL загруженного изображения
