@@ -1,7 +1,8 @@
 import { USER_POSTS_PAGE, POSTS_PAGE } from "../routes.js";
 import { renderHeaderComponent } from "./header-component.js";
-import { posts, goToPage, user } from "../index.js";
+import { posts, goToPage, user, page } from "../index.js";
 import { likePost, dislikePost } from "../api.js";
+import { sanitize } from "../helpers.js";
 
 export function renderPostsPageComponent({ appEl }) {
   // @TODO: реализовать рендер постов из api
@@ -23,7 +24,9 @@ export function renderPostsPageComponent({ appEl }) {
                 <img src="${
                   post.user.imageUrl
                 }" class="post-header__user-image">
-                <p class="post-header__user-name">${post.user.name}</p>
+                <p class="post-header__user-name">${sanitize(
+                  post.user.name
+                )}</p>
               </div>
               <div class="post-image-container">
                 <img class="post-image" src="${post.imageUrl}">
@@ -39,8 +42,8 @@ export function renderPostsPageComponent({ appEl }) {
                 </p>
               </div>
               <p class="post-text">
-                <span class="user-name">${post.user.name}</span>
-                ${post.description}
+                <span class="user-name">${sanitize(post.user.name)}</span>
+                ${sanitize(post.description)}
               </p>
               <p class="post-date">
                 ${post.createdAt
@@ -84,7 +87,7 @@ export function renderPostsPageComponent({ appEl }) {
       const likeAction = post.isLiked ? dislikePost : likePost;
       likeAction({ postId, token: `Bearer ${user.token}` }).then(() => {
         // Обновить посты после лайка
-        if (window.location.hash === `#${USER_POSTS_PAGE}`) {
+        if (page === USER_POSTS_PAGE) {
           goToPage(USER_POSTS_PAGE, { userId: post.user.id });
         } else {
           goToPage(POSTS_PAGE);
